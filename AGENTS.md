@@ -31,3 +31,7 @@ whole-percent rate.
 Build with `/Users/rika/.dotnet/dotnet`. Package testing must happen in a
 running Dalamud/XIVLauncher instance on Windows after unit/build checks pass.
 When correlation is uncertain, do not modify the native flytext.
+
+The project owner authorised the initial public `v0.1.0.0` release on
+2026-08-18. Keep the live-game validation record and follow-up issue reports
+current for later releases.

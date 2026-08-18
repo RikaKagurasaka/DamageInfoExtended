@@ -42,8 +42,9 @@ the Release build; do not hand-author the package manifest.
 Never change an existing release asset in place. Increase the assembly version
 for each release so Dalamud refreshes the installed package.
 
-## Current publishing gate
+## Current publishing status
 
-The project builds and its pure tests pass, but it has not yet completed the
-required live FFXIV compatibility and correlation test matrix. The feed must
-remain empty until that gate is completed.
+The project owner authorised the initial public `v0.1.0.0` release on
+2026-08-18. The release and feed workflows may now publish its package. Keep
+the live-game test matrix and any issue reports up to date for subsequent
+releases.
