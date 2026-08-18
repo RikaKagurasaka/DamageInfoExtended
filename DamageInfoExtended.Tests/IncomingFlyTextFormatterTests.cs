@@ -38,12 +38,13 @@ public sealed class IncomingFlyTextFormatterTests
     }
 
     [Fact]
-    public void DisplaysAllMitigationAsTruncatedIntegerPercent()
+    public void DisplaysAllMitigationAsRoundedIntegerPercent()
     {
         var combined = IncomingFlyTextFormatter.CombineReductions(0.28f, 0.15f);
 
         Assert.Equal(0.388f, combined, precision: 3);
-        Assert.Equal(" -38%", IncomingFlyTextFormatter.BuildSourceSuffix(combined));
-        Assert.Equal(" -15%", IncomingFlyTextFormatter.BuildSourceSuffix(0.159f));
+        Assert.Equal(" -39%", IncomingFlyTextFormatter.BuildSourceSuffix(combined));
+        Assert.Equal(" -16%", IncomingFlyTextFormatter.BuildSourceSuffix(0.159f));
+        Assert.Equal(" -20%", IncomingFlyTextFormatter.BuildSourceSuffix(0.199999f));
     }
 }

@@ -18,8 +18,8 @@
 - Recognised native parenthesised block/parry suffixes are combined
   multiplicatively with status reduction and folded into one source suffix.
   Supported forms cover Chinese, English, Japanese, German and French; an
-  unrecognised form is left intact. Every mitigation result is truncated to an
-  integer percentage.
+  unrecognised form is left intact. Every mitigation result is rounded to an
+  integer percentage with half-away-from-zero midpoint handling.
 - A configuration option can place the mitigation suffix before the source
   instead of after it.
 - The configuration window exposes the annotation, source-debuff inclusion,

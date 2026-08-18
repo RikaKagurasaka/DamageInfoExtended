@@ -8,7 +8,7 @@
     <Description>GPL-3.0 Damage Info derivative that annotates local incoming damage with calculated active mitigation.</Description>
     <RepoUrl>https://github.com/RikaKagurasaka/DamageInfoExtended</RepoUrl>
     <Tags>combat;damage;flytext;mitigation</Tags>
-    <Changelog>Initial public testing build. Adds calculated local incoming-damage mitigation to Damage Info flytext.</Changelog>
+    <Changelog>Initial public testing build. Adds calculated local incoming-damage mitigation to Damage Info flytext, rounded to whole percentages.</Changelog>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   

@@ -44,14 +44,15 @@ internal static partial class IncomingFlyTextFormatter
         => 1f - ((1f - Math.Clamp(first, 0f, 1f)) * (1f - Math.Clamp(second, 0f, 1f)));
 
     /// <summary>
-    /// Formats the calculated rate as a compact integer percentage. Truncate
-    /// rather than round so the displayed rate never exceeds the calculation.
+    /// Formats the calculated rate as a compact integer percentage. Round away
+    /// from zero at midpoints so binary float representation cannot turn an
+    /// intended whole-percent mitigation (for example 20%) into 19%.
     /// </summary>
     internal static string BuildSourceSuffix(float reduction)
     {
         if (reduction <= 0)
             return string.Empty;
 
-        return $" -{MathF.Truncate(reduction * 100):0}%";
+        return $" -{MathF.Round(reduction * 100, MidpointRounding.AwayFromZero):0}%";
     }
 }

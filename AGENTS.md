@@ -23,8 +23,10 @@ unrecognised subtitle unchanged.
 Keep the source and mitigation order configurable: default is `>[source] -28%`,
 and the alternative is `-28% >[source]`.
 
-Truncate every displayed mitigation rate to an integer percentage, whether it
-is status-only or includes a recognised native block/parry rate.
+Round every displayed mitigation rate to an integer percentage, whether it is
+status-only or includes a recognised native block/parry rate. Use
+half-away-from-zero rounding to avoid binary-float under-display of a nominal
+whole-percent rate.
 
 Build with `/Users/rika/.dotnet/dotnet`. Package testing must happen in a
 running Dalamud/XIVLauncher instance on Windows after unit/build checks pass.
