@@ -1,12 +1,20 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <PluginVersion>2.4.1.7</PluginVersion>
+    <PluginVersion>0.1.0.0</PluginVersion>
+    <AssemblyName>DamageInfoExtended</AssemblyName>
+    <Name>Damage Info Extended</Name>
+    <Author>Rika Kagurasaka; derived from Damage Info by perchbird</Author>
+    <Punchline>Add damage type, source, and calculated mitigation to native flytext.</Punchline>
+    <Description>GPL-3.0 Damage Info derivative that annotates local incoming damage with calculated active mitigation.</Description>
+    <RepoUrl>https://github.com/RikaKagurasaka/DamageInfoExtended</RepoUrl>
+    <Tags>combat;damage;flytext;mitigation</Tags>
+    <Changelog>Initial public testing build. Adds calculated local incoming-damage mitigation to Damage Info flytext.</Changelog>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   
   <PropertyGroup>
-    <AssemblyTitle>DamageInfoPlugin</AssemblyTitle>
-    <Product>DamageInfoPlugin</Product>
+    <AssemblyTitle>DamageInfoExtended</AssemblyTitle>
+    <Product>DamageInfoExtended</Product>
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>

@@ -1,34 +1,31 @@
-﻿name: .NET Build
+name: Build
 
 on:
   push:
+  pull_request:
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Setup .NET
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.x.x'
+          dotnet-version: "10.0.x"
       - name: Restore dependencies
         run: dotnet restore
-      - name: Download Dalamud
-        if: "!contains(github.event.head_commit.message, '[stg]')"
+      - name: Download Dalamud developer bundle
+        shell: pwsh
         run: |
           Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile latest.zip
           Expand-Archive -Force latest.zip "$env:AppData\XIVLauncher\addon\Hooks\dev"
-      - name: Download Dalamud staging
-        if: "contains(github.event.head_commit.message, '[stg]')"
-        run: |
-          Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/stg/latest.zip -OutFile latest.zip
-          Expand-Archive -Force latest.zip "$env:AppData\XIVLauncher\addon\Hooks\dev"
       - name: Build
-        run: |
-          dotnet build --no-restore --configuration Release --nologo
-      - name: Upload a Build Artifact
+        run: dotnet build --no-restore --configuration Debug --nologo
+      - name: Test
+        run: dotnet test DamageInfoExtended.Tests/DamageInfoExtended.Tests.csproj --no-restore --nologo
+      - name: Upload package artifact
         uses: actions/upload-artifact@v4
         with:
-          path: |
-            ./DamageInfoPlugin/bin/Release/DamageInfoPlugin/*
+          name: DamageInfoExtended-debug
+          path: ./DamageInfoPlugin/bin/Debug/*

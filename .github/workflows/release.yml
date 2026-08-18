@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Download Dalamud developer bundle
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile latest.zip
+          Expand-Archive -Force latest.zip "$env:AppData\XIVLauncher\addon\Hooks\dev"
+      - name: Restore and package
+        shell: pwsh
+        run: |
+          dotnet restore
+          dotnet build DamageInfoPlugin.sln --no-restore --configuration Release --nologo
+          if (!(Test-Path "DamageInfoPlugin/bin/Release/DamageInfoExtended/latest.zip")) {
+            throw "Dalamud package latest.zip was not produced."
+          }
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release create "${{ github.ref_name }}" "DamageInfoPlugin/bin/Release/DamageInfoExtended/latest.zip#latest.zip" --title "Damage Info Extended ${{ github.ref_name }}" --generate-notes

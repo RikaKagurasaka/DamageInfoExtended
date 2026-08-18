@@ -88,6 +88,11 @@ public class Configuration : IPluginConfiguration
 	public bool PetSourceTextEnabled { get; set; }
 	public bool HealSourceTextEnabled { get; set; }
 
+	public bool IncomingMitigationEnabled { get; set; } = true;
+	public bool MitigationIncludeSourceDebuffs { get; set; } = true;
+	public bool MitigationTextBeforeSource { get; set; }
+	public bool MitigationDiagnosticsEnabled { get; set; }
+
 	public bool IncomingAttackTextEnabled { get; set; } = true;
 	public bool OutgoingAttackTextEnabled { get; set; } = true;
 	public bool PetAttackTextEnabled { get; set; } = true;

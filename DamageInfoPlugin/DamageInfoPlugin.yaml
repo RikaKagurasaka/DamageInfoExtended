@@ -1,6 +1,11 @@
-﻿name: Damage Info
-internal_name: DamageInfoPlugin
-author: perchbird
-punchline: Modifies in-game fly-text for more (or less) damage information.
-description: Configurable options for in-game fly text color based on damage type, with additional settings for damage source and fly text decluttering options.
-repo_url: https://github.com/perchbirdd/DamageInfoPlugin
+name: Damage Info Extended
+internal_name: DamageInfoExtended
+author: Rika Kagurasaka; derived from Damage Info by perchbird
+punchline: Adds damage type, source, and active mitigation information to native flytext.
+description: GPL-3.0 Damage Info derivative that adds calculated active mitigation to local incoming-damage flytext.
+repo_url: https://github.com/RikaKagurasaka/DamageInfoExtended
+tags:
+  - combat
+  - damage
+  - flytext
+  - mitigation

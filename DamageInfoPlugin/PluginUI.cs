@@ -74,6 +74,10 @@ namespace DamageInfoPlugin
                 var posColorHitConfigValue = configuration.PositionalHitColorEnabled;
                 var posColorMissConfigValue = configuration.PositionalMissColorEnabled;
                 var seDamageIconDisableValue = configuration.SeDamageIconDisable;
+                var incomingMitigationEnabled = configuration.IncomingMitigationEnabled;
+                var mitigationIncludeSourceDebuffs = configuration.MitigationIncludeSourceDebuffs;
+				var mitigationTextBeforeSource = configuration.MitigationTextBeforeSource;
+				var mitigationDiagnosticsEnabled = configuration.MitigationDiagnosticsEnabled;
 
                 var sourceTextConfigValue = configuration.SourceTextEnabled;
                 var petSourceTextConfigValue = configuration.PetSourceTextEnabled;
@@ -293,6 +297,33 @@ namespace DamageInfoPlugin
                         configuration.PhysicalColor = ImGui.ColorConvertU32ToFloat4(0xffc39c5f);
                         configuration.MagicColor = ImGui.ColorConvertU32ToFloat4(0xffc059a8);
                         configuration.DarknessColor = ImGui.ColorConvertU32ToFloat4(0xff49b859);
+                        configuration.Save();
+                    }
+                }
+
+                if (ImGui.CollapsingHeader("Incoming mitigation"))
+                {
+                    ImGui.TextWrapped("Adds the known, active mitigation rate to incoming source text as >source -28%. Reductions stack multiplicatively; recognised native block/parry reductions are included. Shields and variable effects are not included.");
+                    if (ImGui.Checkbox("Show active mitigation", ref incomingMitigationEnabled))
+                    {
+                        configuration.IncomingMitigationEnabled = incomingMitigationEnabled;
+                        configuration.Save();
+                    }
+
+                    if (ImGui.Checkbox("Include enemy damage-down debuffs (Reprisal, Addle, Feint)", ref mitigationIncludeSourceDebuffs))
+                    {
+                        configuration.MitigationIncludeSourceDebuffs = mitigationIncludeSourceDebuffs;
+                        configuration.Save();
+                    }
+
+                    if (ImGui.Checkbox("Show mitigation before source", ref mitigationTextBeforeSource))
+                    {
+                        configuration.MitigationTextBeforeSource = mitigationTextBeforeSource;
+                        configuration.Save();
+                    }
+                    if (ImGui.Checkbox("Log mitigation correlation diagnostics (IDs only)", ref mitigationDiagnosticsEnabled))
+                    {
+                        configuration.MitigationDiagnosticsEnabled = mitigationDiagnosticsEnabled;
                         configuration.Save();
                     }
                 }

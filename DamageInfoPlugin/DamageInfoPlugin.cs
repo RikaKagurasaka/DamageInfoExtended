@@ -12,11 +12,14 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Hooking;
 using DamageInfoPlugin.Positionals;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
+using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Dalamud.Bindings.ImGui;
 using static DamageInfoPlugin.LogType;
 using Action = Lumina.Excel.Sheets.Action;
+using Status = Lumina.Excel.Sheets.Status;
 using Character = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 using DObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
 
@@ -34,9 +37,9 @@ public unsafe class DamageInfoPlugin : IDalamudPlugin
 	private const int FocusTargetInfoGaugeBgNodeId = 8;
 	private const int FocusTargetInfoGaugeNodeId = 6;
 
-	public string Name => "Damage Info";
+	public string Name => "Damage Info Extended";
 
-	private const string CommandName = "/dmginfo";
+	private const string CommandName = "/dmginfoext";
 
 	private readonly Configuration _configuration;
 	private readonly PluginUI _ui;
@@ -53,11 +56,10 @@ public unsafe class DamageInfoPlugin : IDalamudPlugin
 		int val3,
 		int val4);
 
-	private delegate void ReceiveActionEffectDelegate(uint sourceId, Character* sourceCharacter, IntPtr pos, EffectHeader* effectHeader, EffectEntry* effectArray, ulong* effectTail);
 	private delegate void SetCastBarDelegate(IntPtr thisPtr, IntPtr a2, IntPtr a3, IntPtr a4, char a5);
 
 	private readonly Hook<AddScreenLogDelegate> _addScreenLogHook;
-	private readonly Hook<ReceiveActionEffectDelegate> _receiveActionEffectHook;
+	private readonly Hook<ActionEffectHandler.Delegates.Receive> _receiveActionEffectHook;
 	private readonly Hook<SetCastBarDelegate> _setCastBarHook;
 	private readonly Hook<SetCastBarDelegate> _setFocusTargetCastBarHook;
 
@@ -99,9 +101,9 @@ public unsafe class DamageInfoPlugin : IDalamudPlugin
 		};
 		_posManager = new PositionalManager();
 
-		DalamudApi.CommandManager.AddHandler("/dmginfo", new CommandInfo(OnCommand)
+		DalamudApi.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
 		{
-			HelpMessage = "Display the Damage Info configuration interface.",
+			HelpMessage = "Display the Damage Info Extended configuration interface.",
 		});
 
 		try
@@ -123,8 +125,9 @@ public unsafe class DamageInfoPlugin : IDalamudPlugin
 					_ignoredCastActions.Add(row.ActionCategory.RowId);
 			}
 
-			var receiveActionEffectFuncPtr = DalamudApi.SigScanner.ScanText("E8 ?? ?? ?? ?? 48 8B 8D ?? ?? ?? ?? 48 33 CC E8 ?? ?? ?? ?? 48 81 C4 00 05 00 00");
-			_receiveActionEffectHook = DalamudApi.Hooks.HookFromAddress<ReceiveActionEffectDelegate>(receiveActionEffectFuncPtr, ReceiveActionEffect);
+			_receiveActionEffectHook = DalamudApi.Hooks.HookFromAddress<ActionEffectHandler.Delegates.Receive>(
+				ActionEffectHandler.MemberFunctionPointers.Receive,
+				ReceiveActionEffect);
 
 			var addScreenLogPtr = DalamudApi.SigScanner.ScanText("E8 ?? ?? ?? ?? BF ?? ?? ?? ?? EB 39");
 			_addScreenLogHook = DalamudApi.Hooks.HookFromAddress<AddScreenLogDelegate>(addScreenLogPtr, AddScreenLogDetour);
@@ -471,101 +474,109 @@ public unsafe class DamageInfoPlugin : IDalamudPlugin
 		return dGameObject.Name;
     }
 
-	private void ReceiveActionEffect(uint sourceId, Character* sourceCharacter, IntPtr pos, EffectHeader* effectHeader, EffectEntry* effectArray, ulong* effectTail)
+	private void ReceiveActionEffect(
+		uint sourceId,
+		Character* sourceCharacter,
+		Vector3* targetPos,
+		ActionEffectHandler.Header* effectHeader,
+		ActionEffectHandler.TargetEffects* targetEffects,
+		GameObjectId* targetEntityIds)
 	{
 		try
 		{
 			_actionStore.Cleanup();
+			if (effectHeader is null || targetEffects is null || targetEntityIds is null)
+				return;
 
-			DebugLog(Effect, $"--- source actor: {sourceCharacter->GameObject.EntityId}, action id {effectHeader->ActionId}, anim id {effectHeader->AnimationId} numTargets: {effectHeader->TargetCount} ---");
+			var targetCount = Math.Min((int)effectHeader->NumTargets, 32);
+			var actionId = (int)effectHeader->ActionId;
+			DebugLog(Effect, $"--- source actor={sourceId:X8} action={actionId} targets={targetCount} ---");
 
-			// TODO: Reimplement opcode logging, if it's even useful. Original code follows
-			// ushort op = *((ushort*) effectHeader.ToPointer() - 0x7);
-			// DebugLog(Effect, $"--- source actor: {sourceId}, action id {id}, anim id {animId}, opcode: {op:X} numTargets: {targetCount} ---");
-
-			var entryCount = effectHeader->TargetCount switch
-			{
-				0 => 0,
-				1 => 8,
-				<= 8 => 64,
-				<= 16 => 128,
-				<= 24 => 192,
-				<= 32 => 256,
-				_ => 0
-			};
-
-			// Check if we have data for this action ID.
-			// Then we can check if the p2 is in the expected value set for positional success.
 			var positionalState = PositionalState.Ignore;
-			var isPositional = _posManager.IsPositional(effectHeader->AnimationId);
+			var isPositional = _posManager.IsPositional(actionId);
 			if (isPositional)
 			{
 				positionalState = PositionalState.Failure;
-				for (int i = 0; i < entryCount; i++)
-					if (effectArray[i].type == ActionEffectType.Damage)
-						if (_posManager.IsPositionalHit(effectHeader->AnimationId, effectArray[i].param2))
-							positionalState = PositionalState.Success;
-
-				if (DalamudApi.ObjectTable.LocalPlayer?.EntityId == sourceCharacter->EntityId) {
-					if (positionalState is PositionalState.Success) 
+				for (var targetIndex = 0; targetIndex < targetCount; targetIndex++)
+				for (var effectIndex = 0; effectIndex < 8; effectIndex++)
+				{
+					ref var effect = ref targetEffects[targetIndex].Effects[effectIndex];
+					if ((ActionEffectType)effect.Type == ActionEffectType.Damage &&
+						_posManager.IsPositionalHit(actionId, effect.Param2))
 					{
-						_positionalsHit++;
+						positionalState = PositionalState.Success;
 					}
+				}
 
+				if (DalamudApi.ObjectTable.LocalPlayer?.EntityId == sourceId)
+				{
+					if (positionalState is PositionalState.Success)
+						_positionalsHit++;
 					_positionalsAttempted++;
 				}
 			}
-			
-			if (isPositional)
+
+			for (var targetIndex = 0; targetIndex < targetCount; targetIndex++)
 			{
-				for (int i = 0; i < entryCount; i++)
+				var target = GetEntityId(targetEntityIds[targetIndex]);
+				for (var effectIndex = 0; effectIndex < 8; effectIndex++)
 				{
-					if (effectArray[i].type == ActionEffectType.Damage && sourceId == GetCharacterActorId())
+					ref var effect = ref targetEffects[targetIndex].Effects[effectIndex];
+					var effectType = (ActionEffectType)effect.Type;
+					if (effectType == ActionEffectType.Nothing)
+						continue;
+
+					if (isPositional && effectType == ActionEffectType.Damage && sourceId == GetCharacterActorId())
 					{
-						var id = effectHeader->AnimationId;
-						var name = id.ToString();
-						if (_actionToNameDict.TryGetValue(id, out var sheetName))
-							name = $"{sheetName} [{name}]";
-						PositionalLog($"Action: {name} jobLevel: {GetCurrentLevel()} boostPercent: {effectArray[i].param2} positionalState: {positionalState}");
+						var actionName = _actionToNameDict.TryGetValue((uint)actionId, out var sheetName)
+							? $"{sheetName} [{actionId}]"
+							: actionId.ToString();
+						PositionalLog($"Action: {actionName} jobLevel: {GetCurrentLevel()} boostPercent: {effect.Param2} positionalState: {positionalState}");
 					}
+
+					uint damage = effect.Value;
+					if ((effect.Param4 & 0x40) == 0x40)
+						damage += (uint)effect.Param3 << 16;
+
+					var damageType = ((AttackType)(effect.Param1 & 0xF)).ToDamageType();
+					if (effectType == ActionEffectType.Heal)
+						damageType = DamageType.None;
+
+					MitigationResult? mitigation = null;
+					if (_configuration.IncomingMitigationEnabled &&
+						target == GetCharacterActorId() &&
+						sourceId != GetCharacterActorId() &&
+						effectType is ActionEffectType.Damage or ActionEffectType.BlockedDamage or ActionEffectType.ParriedDamage)
+					{
+						mitigation = MitigationCalculator.Calculate(
+							damageType,
+							CaptureMitigationStatuses(target),
+							CaptureMitigationStatuses(sourceId),
+							_configuration.MitigationIncludeSourceDebuffs);
+						MitigationLog($"capture action={effectHeader->ActionId} source={sourceId:X8} target={target:X8} amount={damage} type={damageType} rate={mitigation.DisplayPercent} rules={mitigation.Contributions.Count}");
+					}
+
+					_actionStore.AddEffect(new ActionEffectInfo
+					{
+						step = ActionStep.Effect,
+						actionId = effectHeader->ActionId,
+						type = effectType,
+						damageType = damageType,
+						sourceId = sourceId,
+						targetId = target,
+						value = damage,
+						positionalState = positionalState,
+						mitigation = mitigation,
+					});
 				}
-			}
-			
-			for (int i = 0; i < entryCount; i++)
-			{
-				if (effectArray[i].type == ActionEffectType.Nothing) continue;
-
-				var target = effectTail[i / 8];
-				uint dmg = effectArray[i].value;
-				if (effectArray[i].mult != 0)
-					dmg += ((uint)ushort.MaxValue + 1) * effectArray[i].mult;
-
-				var dmgType = ((AttackType)effectArray[i].AttackType).ToDamageType();
-				if (effectArray[i].type == ActionEffectType.Heal) dmgType = DamageType.None;
-				DebugLog(Effect, $"{effectArray[i]}, s: {sourceId} t: {target} dmgType {dmgType}");
-
-				var newEffect = new ActionEffectInfo
-				{
-					step = ActionStep.Effect,
-					actionId = effectHeader->ActionId,
-					type = effectArray[i].type,
-					damageType = dmgType,
-					// we fill in LogKind later 
-					sourceId = sourceId,
-					targetId = target,
-					value = dmg,
-					positionalState = positionalState
-				};
-
-				_actionStore.AddEffect(newEffect);
 			}
 		}
 		catch (Exception e)
 		{
-			DalamudApi.PluginLog.Error(e, "An error has occurred in Damage Info.");
+			DalamudApi.PluginLog.Error(e, "An error has occurred in Damage Info Extended.");
 		}
 
-		_receiveActionEffectHook.Original(sourceId, sourceCharacter, pos, effectHeader, effectArray, effectTail);
+		_receiveActionEffectHook.Original(sourceId, sourceCharacter, targetPos, effectHeader, targetEffects, targetEntityIds);
 	}
 
 	private int GetCurrentLevel()
@@ -601,6 +612,7 @@ public unsafe class DamageInfoPlugin : IDalamudPlugin
 			}
 
 			_actionStore.UpdateEffect((uint)actionId, sourceId, targetId, (uint)val1, (uint)serverAttackType, logKind);
+			MitigationLog($"screenlog action={actionId} source={sourceId:X8} target={targetId:X8} amount={val1} serverType={serverAttackType} kind={(int)logKind}");
 		}
 		catch (Exception e)
 		{
@@ -641,6 +653,7 @@ public unsafe class DamageInfoPlugin : IDalamudPlugin
 			var damageType = ((SeDamageType)damageTypeIcon).ToDamageType();
 			if (!_actionStore.TryGetEffect((uint)val1, damageType, ftKind, charaId, petIds, out var info))
 			{
+				MitigationLog($"flytext no-match amount={val1} type={damageType} kind={(int)ftKind}");
 				DebugLog(FlyText, $"Failed to obtain info... {val1} {damageType} {ftKind} {charaId}");
 				return;
 			}
@@ -684,16 +697,44 @@ public unsafe class DamageInfoPlugin : IDalamudPlugin
 				}
 			}
 
-			if (_configuration.SourceTextEnabled || _configuration.PetSourceTextEnabled || _configuration.HealSourceTextEnabled)
+			var isIncomingDamage = _configuration.IncomingMitigationEnabled &&
+				!isCharaAction &&
+				isCharaTarget &&
+				!isHealingAction;
+			var incomingMitigation = isIncomingDamage &&
+				info.mitigation is { HasKnownReduction: true } mitigation
+				? mitigation
+				: null;
+			var statusReduction = incomingMitigation?.Reduction ?? 0f;
+			var nativeBlockParryReduction = 0f;
+			var originalSubtitle = text2 ?? SeString.Empty;
+			var subtitleWithoutNativeBlockParry = originalSubtitle;
+			if (isIncomingDamage && IncomingFlyTextFormatter.TryExtractBlockOrParry(originalSubtitle.TextValue, out var nativeReduction, out var strippedSubtitle))
+			{
+				nativeBlockParryReduction = nativeReduction;
+				subtitleWithoutNativeBlockParry = strippedSubtitle.Length == 0
+					? SeString.Empty
+					: new SeString(new List<Payload> { new TextPayload(strippedSubtitle) });
+			}
+
+			var combinedReduction = IncomingFlyTextFormatter.CombineReductions(statusReduction, nativeBlockParryReduction);
+			var incomingSuffix = IncomingFlyTextFormatter.BuildSourceSuffix(combinedReduction);
+
+			if (_configuration.SourceTextEnabled || _configuration.PetSourceTextEnabled || _configuration.HealSourceTextEnabled || !string.IsNullOrEmpty(incomingSuffix))
 			{
 				var tgtCheck = !isCharaAction && !isHealingAction && !isPetAction && _configuration.SourceTextEnabled;
 				var petCheck = isPetAction && _configuration.PetSourceTextEnabled;
 				var healCheck = isHealingAction && _configuration.HealSourceTextEnabled;
 
-				if (tgtCheck || petCheck || healCheck)
+				if ((tgtCheck || petCheck || healCheck || !string.IsNullOrEmpty(incomingSuffix)) && GetActorName(info.sourceId).Payloads.Count > 0)
 				{
-					text2 = GetNewText(info.sourceId, text2);
+					text2 = GetNewText(info.sourceId, subtitleWithoutNativeBlockParry, incomingSuffix, _configuration.MitigationTextBeforeSource);
 				}
+			}
+
+			if (incomingMitigation is not null || nativeBlockParryReduction > 0)
+			{
+				MitigationLog($"flytext matched action={info.actionId} source={info.sourceId:X8} target={info.targetId:X8} amount={info.value} type={info.damageType} statusRate={statusReduction * 100:0.#}% nativeBlockParry={nativeBlockParryReduction * 100:0.#}% totalRate={combinedReduction * 100:0.#}%");
 			}
 
 			if (_configuration.SeDamageIconDisable)
@@ -800,12 +841,17 @@ public unsafe class DamageInfoPlugin : IDalamudPlugin
 		}
 	}
 
-	private SeString GetNewText(uint sourceId, SeString originalText)
+	private SeString GetNewText(uint sourceId, SeString originalText, string? suffix = null, bool suffixBeforeSource = false)
 	{
 		SeString name = GetActorName(sourceId);
 		var newPayloads = new List<Payload>();
 
 		if (name.Payloads.Count == 0) return originalText;
+		if (suffixBeforeSource && !string.IsNullOrEmpty(suffix))
+		{
+			newPayloads.Add(new TextPayload(suffix.TrimStart()));
+			newPayloads.Add(new TextPayload(" "));
+		}
 
 		switch (DalamudApi.ClientState.ClientLanguage)
 		{
@@ -825,11 +871,14 @@ public unsafe class DamageInfoPlugin : IDalamudPlugin
 				newPayloads.Add(new TextPayload("de "));
 				newPayloads.AddRange(name.Payloads);
 				break;
-			default:
-				newPayloads.Add(new TextPayload(">"));
-				newPayloads.AddRange(name.Payloads);
-				break;
+		default:
+			newPayloads.Add(new TextPayload(">"));
+			newPayloads.AddRange(name.Payloads);
+			break;
 		}
+
+		if (!suffixBeforeSource && !string.IsNullOrEmpty(suffix))
+			newPayloads.Add(new TextPayload(suffix));
 
 		if (originalText.Payloads.Count > 0)
 			newPayloads.AddRange(originalText.Payloads);
@@ -837,10 +886,40 @@ public unsafe class DamageInfoPlugin : IDalamudPlugin
 		return new SeString(newPayloads);
 	}
 
+	private IReadOnlyList<MitigationStatus> CaptureMitigationStatuses(uint entityId)
+	{
+		if (entityId == 0 || DalamudApi.ObjectTable.SearchById(entityId) is not IBattleChara battleChara)
+			return Array.Empty<MitigationStatus>();
+
+		var sheet = DalamudApi.DataManager.GetExcelSheet<Status>();
+		var results = new List<MitigationStatus>();
+		foreach (var status in battleChara.StatusList)
+		{
+			if (status.StatusId == 0)
+				continue;
+
+			var name = sheet?.GetRowOrDefault(status.StatusId)?.Name.ExtractText() ?? string.Empty;
+			results.Add(new MitigationStatus(status.StatusId, name, status.SourceId));
+		}
+
+		return results;
+	}
+
+	private static uint GetEntityId(GameObjectId targetId)
+		=> targetId.ObjectId != 0
+			? targetId.ObjectId
+			: targetId.Id <= uint.MaxValue ? (uint)targetId.Id : 0;
+
 	private void DebugLog(LogType type, string str)
 	{
 		if (_configuration.DebugLogEnabled)
 			DalamudApi.PluginLog.Information($"[{type}] {str}");
+	}
+
+	private void MitigationLog(string message)
+	{
+		if (_configuration.MitigationDiagnosticsEnabled)
+			DalamudApi.PluginLog.Information($"[Mitigation] {message}");
 	}
 
 	private uint GetDamageColor(DamageType type, uint fallback = 0xFF00008A)

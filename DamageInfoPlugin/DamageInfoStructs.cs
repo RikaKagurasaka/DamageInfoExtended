@@ -56,38 +56,6 @@ public unsafe struct CastbarInfo
     public override int GetHashCode() => HashCode.Combine(unchecked((int)(long)unitBase), unchecked((int)(long)gauge), unchecked((int)(long)bg));
 }
 
-[StructLayout(LayoutKind.Explicit)]
-public struct EffectHeader
-{
-    [FieldOffset(8)] public uint ActionId;
-    [FieldOffset(28)] public ushort AnimationId;
-    [FieldOffset(33)] public byte TargetCount;
-}
-    
-public struct EffectEntry
-{
-    public ActionEffectType type;
-    public byte param0;
-    public byte param1;
-    public byte param2;
-    public byte mult;
-    public byte flags;
-    public ushort value;
-
-    public byte AttackType => (byte) (param1 & 0xF);
-
-    public override string ToString()
-    {
-        return
-            $"Type: {type}, p0: {param0:D3}, p1: {param1:D3}, p2: {param2:D3} 0x{param2:X2} '{Convert.ToString(param2, 2).PadLeft(8, '0')}', mult: {mult:D3}, flags: {flags:D3} | {Convert.ToString(flags, 2).PadLeft(8, '0')}, value: {value:D6} ATTACK TYPE: {AttackType} DAMAGE TYPE: {((AttackType)AttackType).ToDamageType()}";
-    }
-}
-
-public struct EffectTail
-{
-    
-}
-    
 public struct ActionEffectInfo
 {
     public ActionStep step;
@@ -101,8 +69,9 @@ public struct ActionEffectInfo
     public ulong targetId;
     public uint value;
     public PositionalState positionalState;
+    internal MitigationResult? mitigation;
 
-    public bool Equals(ActionEffectInfo other) => step == other.step && tick == other.tick && actionId == other.actionId && type == other.type && damageType == other.damageType && kind == other.kind && sourceId == other.sourceId && targetId == other.targetId && value == other.value && positionalState == other.positionalState;
+    public bool Equals(ActionEffectInfo other) => step == other.step && tick == other.tick && actionId == other.actionId && type == other.type && damageType == other.damageType && kind == other.kind && sourceId == other.sourceId && targetId == other.targetId && value == other.value && positionalState == other.positionalState && Equals(mitigation, other.mitigation);
     public override bool Equals(object obj) => obj is ActionEffectInfo other && Equals(other);
     public override int GetHashCode()
     {
@@ -117,8 +86,9 @@ public struct ActionEffectInfo
         hashCode.Add(targetId);
         hashCode.Add(value);
         hashCode.Add((int)positionalState);
+        hashCode.Add(mitigation);
         return hashCode.ToHashCode();
     }
 
-    public override string ToString() => $"{nameof(step)}: {step}, {nameof(tick)}: {tick}, {nameof(actionId)}: {actionId}, {nameof(type)}: {type}, {nameof(damageType)}: {damageType}, {nameof(kind)}: {kind}, {nameof(sourceId)}: {sourceId}, {nameof(targetId)}: {targetId}, {nameof(value)}: {value}, {nameof(positionalState)}: {positionalState}";
+    public override string ToString() => $"{nameof(step)}: {step}, {nameof(tick)}: {tick}, {nameof(actionId)}: {actionId}, {nameof(type)}: {type}, {nameof(damageType)}: {damageType}, {nameof(kind)}: {kind}, {nameof(sourceId)}: {sourceId}, {nameof(targetId)}: {targetId}, {nameof(value)}: {value}, {nameof(positionalState)}: {positionalState}, {nameof(mitigation)}: {mitigation?.DisplayPercent}";
 }
