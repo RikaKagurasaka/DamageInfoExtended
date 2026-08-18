@@ -44,7 +44,8 @@ for each release so Dalamud refreshes the installed package.
 
 ## Current publishing status
 
-The project owner authorised the initial public `v0.1.0.0` release on
-2026-08-18. The release and feed workflows may now publish its package. Keep
-the live-game test matrix and any issue reports up to date for subsequent
-releases.
+The project owner authorised and the workflows published the initial public
+[`v0.1.0.0`](https://github.com/RikaKagurasaka/DamageInfoExtended/releases/tag/v0.1.0.0)
+release on 2026-08-18. The `DalamudPlugins` feed now lists that immutable
+`latest.zip` asset. Keep the live-game test matrix and any issue reports up to
+date for subsequent releases.
