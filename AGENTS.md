@@ -40,3 +40,9 @@ The Dawntrail level-100 tank mitigation statuses are matched by verified
 numeric IDs: Guardian `3829`, Damnation `3832`, Shadowed Vigil `3835`, and
 Great Nebula `3838`. Great Nebula's reduction remains 40%; do not substitute
 the stale 15% value found in Better Deaths' possible-use metadata.
+
+Healer percentage mitigations use verified IDs where available: Aquaveil
+`2708`, Confession `1219`, Expedient's Desperate Measures component `2711`,
+Exaltation `2717`, and Taurochole `2619`. Shield-only effects and Seraphism are
+not percentage mitigation; Sun Sign and Holos remain pending live/client-data
+ID verification.

@@ -111,4 +111,22 @@ public sealed class MitigationCalculatorTests
         var contribution = Assert.Single(result.Contributions);
         Assert.Equal(name, contribution.Name);
     }
+
+    [Theory]
+    [InlineData(2708, "Aquaveil", 0.15f)]
+    [InlineData(2717, "Exaltation", 0.10f)]
+    [InlineData(2711, "Expedient", 0.10f)]
+    [InlineData(2619, "Taurochole", 0.10f)]
+    [InlineData(1219, "Confession", 0.10f)]
+    public void RecognisesHealerMitigationsByStatusId(uint statusId, string name, float expectedReduction)
+    {
+        var result = MitigationCalculator.Calculate(
+            DamageType.Magical,
+            [new MitigationStatus(statusId, "localized status name", 100)],
+            Array.Empty<MitigationStatus>(),
+            includeSourceDebuffs: false);
+
+        Assert.Equal(expectedReduction, result.Reduction, precision: 3);
+        Assert.Equal(name, Assert.Single(result.Contributions).Name);
+    }
 }
