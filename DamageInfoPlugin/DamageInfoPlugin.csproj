@@ -1,6 +1,6 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <PluginVersion>0.1.0.0</PluginVersion>
+    <PluginVersion>0.1.1.0</PluginVersion>
     <AssemblyName>DamageInfoExtended</AssemblyName>
     <Name>Damage Info Extended</Name>
     <Author>Rika Kagurasaka; derived from Damage Info by perchbird</Author>
@@ -8,7 +8,7 @@
     <Description>GPL-3.0 Damage Info derivative that annotates local incoming damage with calculated active mitigation.</Description>
     <RepoUrl>https://github.com/RikaKagurasaka/DamageInfoExtended</RepoUrl>
     <Tags>combat;damage;flytext;mitigation</Tags>
-    <Changelog>Initial public testing build. Adds calculated local incoming-damage mitigation to Damage Info flytext, rounded to whole percentages.</Changelog>
+    <Changelog>Adds numeric status-ID matching for all fixed-percentage job mitigations, including Sun Sign and Holos, for reliable localized-client support.</Changelog>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   
