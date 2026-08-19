@@ -52,3 +52,5 @@ date for subsequent releases.
 
 The next release is `v0.1.1.0`; it adds the complete numeric status-ID
 catalogue, including owner-confirmed Sun Sign `3896` and Holos `3003`.
+It was published on 2026-08-19 and the custom feed now points to its immutable
+`latest.zip` asset.
