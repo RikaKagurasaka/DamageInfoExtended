@@ -129,4 +129,44 @@ public sealed class MitigationCalculatorTests
         Assert.Equal(expectedReduction, result.Reduction, precision: 3);
         Assert.Equal(name, Assert.Single(result.Contributions).Name);
     }
+
+    [Theory]
+    [InlineData(74, "Sentinel", 0.30f)]
+    [InlineData(728, "Sheltron", 0.15f)]
+    [InlineData(2674, "Holy Sheltron", 0.15f)]
+    [InlineData(735, "Raw Intuition", 0.10f)]
+    [InlineData(2678, "Bloodwhetting", 0.10f)]
+    [InlineData(1858, "Nascent Glint", 0.10f)]
+    [InlineData(2679, "Stem the Flow", 0.10f)]
+    [InlineData(89, "Vengeance", 0.30f)]
+    [InlineData(747, "Shadow Wall", 0.30f)]
+    [InlineData(2682, "Oblation", 0.10f)]
+    [InlineData(1832, "Camouflage", 0.10f)]
+    [InlineData(1834, "Nebula", 0.30f)]
+    [InlineData(1840, "Heart of Stone", 0.15f)]
+    [InlineData(2683, "Heart of Corundum", 0.15f)]
+    [InlineData(2684, "Clarity of Corundum", 0.15f)]
+    [InlineData(317, "Fey Illumination", 0.05f)]
+    [InlineData(1875, "Seraphic Illumination", 0.05f)]
+    [InlineData(3896, "Sun Sign", 0.10f)]
+    [InlineData(830, "The Bole", 0.10f)]
+    [InlineData(3003, "Holos", 0.10f)]
+    [InlineData(1179, "Riddle of Earth", 0.20f)]
+    [InlineData(1232, "Third Eye", 0.10f)]
+    [InlineData(1197, "Tactician", 0.15f)]
+    [InlineData(2707, "Magick Barrier", 0.10f)]
+    public void RecognisesAdditionalJobMitigationsByStatusId(uint statusId, string name, float expectedReduction)
+    {
+        var damageType = name is "Fey Illumination" or "Seraphic Illumination" or "Magick Barrier"
+            ? DamageType.Magical
+            : DamageType.Physical;
+        var result = MitigationCalculator.Calculate(
+            damageType,
+            [new MitigationStatus(statusId, "localized status name", 100)],
+            Array.Empty<MitigationStatus>(),
+            includeSourceDebuffs: false);
+
+        Assert.Equal(expectedReduction, result.Reduction, precision: 3);
+        Assert.Equal(name, Assert.Single(result.Contributions).Name);
+    }
 }

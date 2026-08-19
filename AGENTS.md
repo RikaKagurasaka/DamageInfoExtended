@@ -46,3 +46,7 @@ Healer percentage mitigations use verified IDs where available: Aquaveil
 Exaltation `2717`, and Taurochole `2619`. Shield-only effects and Seraphism are
 not percentage mitigation; Sun Sign and Holos remain pending live/client-data
 ID verification.
+
+As of 2026-08-19, all fixed-percentage rules in `MitigationCalculator` use
+numeric status IDs. Owner-confirmed IDs are Sun Sign `3896` and Holos `3003`;
+the remaining job IDs were cross-checked against the current 7.4 Status sheet.
