@@ -93,4 +93,22 @@ public sealed class MitigationCalculatorTests
         Assert.False(result.HasKnownReduction);
         Assert.Empty(result.Contributions);
     }
+
+    [Theory]
+    [InlineData(3829, "Guardian")]
+    [InlineData(3832, "Damnation")]
+    [InlineData(3835, "Shadowed Vigil")]
+    [InlineData(3838, "Great Nebula")]
+    public void RecognisesDawntrailLevel100TankMitigationsByStatusId(uint statusId, string name)
+    {
+        var result = MitigationCalculator.Calculate(
+            DamageType.Physical,
+            [new MitigationStatus(statusId, "localized status name", 100)],
+            Array.Empty<MitigationStatus>(),
+            includeSourceDebuffs: false);
+
+        Assert.Equal(0.40f, result.Reduction, precision: 3);
+        var contribution = Assert.Single(result.Contributions);
+        Assert.Equal(name, contribution.Name);
+    }
 }
